@@ -1,10 +1,6 @@
 services:
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    image: eventmanager/frontend:1.0
-    container_name: eventmanager_frontend
+    image: maknis3/eventmanager-frontend:latest
     ports:
       - "4200:80"
     environment:
@@ -15,25 +11,28 @@ services:
       - backend
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: eventmanager/backend:1.0
-    container_name: eventmanager_backend
-    ports:
-      - "5000:5000"
+    image: maknis3/eventmanager-backend:latest
     environment:
       - MONGO_URI=mongodb://mongodb:27017/your_database_name
     networks:
       - eventmanager_network
     depends_on:
       - mongodb
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
 
   mongodb:
-    build:
-      context: ./mongodb
-      dockerfile: Dockerfile
-    container_name: eventmanager_mongodb
+    image: mongo:latest
+
     ports:
       - "27017:27017"
     networks:
@@ -45,7 +44,7 @@ services:
 
 networks:
   eventmanager_network:
-    driver: bridge
+    driver: overlay
 
 volumes:
   mongodb_data:
