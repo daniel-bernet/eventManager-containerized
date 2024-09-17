@@ -39,7 +39,7 @@ This project is a web-based event management application that allows users to ma
       - [Networking in Swarm Mode](#networking-in-swarm-mode)
       - [Rolling Updates](#rolling-updates)
       - [Troubleshooting Swarm Mode](#troubleshooting-swarm-mode)
-    - [Docker Deamon Curl-Request](#docker-deamon-curl-request)
+    - [Docker Daemon Curl-Request](#docker-daemon-curl-request)
     - [Minimum App Features](#minimum-app-features)
 
 ---
@@ -403,9 +403,9 @@ Swarm will update the backend service incrementally, ensuring no downtime.
 
 ---
 
-### Docker Deamon Curl-Request
+### Docker Daemon Curl-Request
 
-Using the following curl command you can access the logs of a specific container using the docker deamon.
+Using the following curl command you can access the logs of a specific container using the docker daemon.
 
 ´´´bash
 curl "http://localhost:2375/v1.47/containers/CONTAINERID/logs?stdout=1" --output -
