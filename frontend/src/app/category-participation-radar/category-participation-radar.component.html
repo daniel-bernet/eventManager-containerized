@@ -1,0 +1,12 @@
+<!-- category-participation-radar.component.html -->
+<ejs-chart id="radar-container" [primaryXAxis]="primaryXAxis" [title]="title">
+  <e-series-collection>
+    <e-series
+      [dataSource]="categoryData"
+      type="Radar"
+      xName="category"
+      yName="count"
+      drawType="Column"
+    ></e-series>
+  </e-series-collection>
+</ejs-chart>

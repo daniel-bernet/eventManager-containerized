@@ -1,0 +1,41 @@
+<div class="main-container">
+  <form
+    [formGroup]="registerForm"
+    (ngSubmit)="onSubmit()"
+    class="form-card"
+  >
+    <h2>Register</h2>
+    <div class="form-group">
+      <label for="username">Username:</label>
+      <input type="text" id="username" formControlName="username" />
+      @if (registerForm.get('username')?.touched &&
+      registerForm.get('username')?.errors?.['required']) {
+      <div class="alert alert-danger">Username is required.</div>
+      }
+    </div>
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" formControlName="password" />
+      @if (registerForm.get('password')?.touched &&
+      registerForm.get('password')?.errors?. ['required']) {
+      <div class="alert alert-danger">Password is required.</div>
+      }
+    </div>
+    <div class="form-group">
+      <label for="confirmPassword">Confirm Password:</label>
+      <input
+        type="password"
+        id="confirmPassword"
+        formControlName="confirmPassword"
+      />
+      @if (registerForm.errors?.['passwordMismatch'] &&
+      registerForm.get('confirmPassword')?.touched) {
+      <div class="alert alert-danger">Passwords must match.</div>
+      }
+    </div>
+    <button type="submit" [disabled]="!registerForm.valid">Register</button>
+    <div class="switch-link">
+      Already have an account? <a routerLink="/login">Login here</a>
+    </div>
+  </form>
+</div>

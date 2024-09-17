@@ -1,0 +1,15 @@
+<div class="event-card {{ event.category.toLowerCase() }}">
+  <h3>{{ event.title }}</h3>
+  <p>{{ event.description }}</p>
+  <p>Location: {{ event.location }}</p>
+  <p>Date: {{ event.timestamp | date : "medium" }}</p>
+  <p>Duration: {{ event.duration }} hours</p>
+  <p>Category: {{ event.category }}</p>
+  <p>Creator: {{ event.creator.username }}</p>
+  <p>Attendees: {{ event.attendees.length }}</p>
+  <div class="event-actions">
+    <button [hidden]="!showDeleteButton" (click)="deleteEvent()">Delete Event</button>
+    <button [hidden]="!showSignUpButton" (click)="signInEvent()">Sign Up</button>
+    <button [hidden]="!showSignOutButton" (click)="signOutEvent()">Sign Out</button>
+  </div>
+</div>

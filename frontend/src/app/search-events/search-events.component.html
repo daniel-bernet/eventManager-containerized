@@ -1,0 +1,32 @@
+<app-navbar></app-navbar>
+
+<div class="main-container">
+  <div class="search-container">
+    <form [formGroup]="searchForm" class="search-form">
+      <input
+        type="text"
+        formControlName="search"
+        placeholder="Search events..."
+      />
+    </form>
+    <div class="category-tags">
+      <span
+        (click)="selectCategory(null)"
+        [class.selected]="selectedCategory === null"
+        >All</span
+      >
+      @for (category of categorys; track category) {
+      <span
+        (click)="selectCategory(category)"
+        [class.selected]="selectedCategory === category"
+        >{{ category }}</span
+      >
+      }
+    </div>
+  </div>
+  <div class="event-list">
+    @for (event of filteredEvents; track event.index) {
+    <app-event-card [event]="event" [showSignUpButton]="true" (refreshRequested)="onRefreshRequested()"></app-event-card>
+    }
+  </div>
+</div>
