@@ -24,12 +24,14 @@ This project is a web-based event management application that allows users to ma
     - [Monitor Resource Usage](#monitor-resource-usage)
     - [Inspect Volumes](#inspect-volumes)
     - [Remove Volumes](#remove-volumes)
+    - [Push to DockerHub](#push-to-dockerhub)
   - [Project Requirements and Docker Features](#project-requirements-and-docker-features)
     - [Images](#images)
     - [Network](#network)
     - [Volumes](#volumes)
     - [Resource Limitation](#resource-limitation)
     - [Security](#security)
+    - [Container user](#container-user)
     - [Setup for Scaling and Swarm Mode](#setup-for-scaling-and-swarm-mode)
       - [Swarm Initialization and Deployment](#swarm-initialization-and-deployment)
       - [Scaling the Backend](#scaling-the-backend)
@@ -37,8 +39,7 @@ This project is a web-based event management application that allows users to ma
       - [Networking in Swarm Mode](#networking-in-swarm-mode)
       - [Rolling Updates](#rolling-updates)
       - [Troubleshooting Swarm Mode](#troubleshooting-swarm-mode)
-    - [Swarm Mode in `docker-compose.yaml`](#swarm-mode-in-docker-composeyaml)
-    - [Docker Integration](#docker-integration)
+    - [Docker Deamon Curl-Request](#docker-deamon-curl-request)
     - [Minimum App Features](#minimum-app-features)
 
 ---
@@ -87,62 +88,6 @@ Before proceeding with the setup, make sure you have the following installed on 
 ### docker-compose.yaml
 
 The following yaml code depicts the base `docker-compose.yaml` file part of the github repository.
-
-```yaml
-version: '3.8'
-services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    image: eventmanager/frontend:1.0
-    container_name: eventmanager_frontend
-    ports:
-      - "4200:80"
-    environment:
-      - API_URL=http://backend:5000
-    networks:
-      - eventmanager_network
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: eventmanager/backend:1.0
-    container_name: eventmanager_backend
-    ports:
-      - "5000:5000"
-    environment:
-      - MONGO_URI=mongodb://mongodb:27017/your_database_name
-    networks:
-      - eventmanager_network
-    depends_on:
-      - mongodb
-
-  mongodb:
-    build:
-      context: ./mongodb
-      dockerfile: Dockerfile
-    container_name: eventmanager_mongodb
-    ports:
-      - "27017:27017"
-    networks:
-      - eventmanager_network
-    volumes:
-      - mongodb_data:/data/db
-    environment:
-      - MONGO_INITDB_DATABASE=your_database_name
-
-networks:
-  eventmanager_network:
-    driver: bridge
-
-volumes:
-  mongodb_data:
-    driver: local
-```
 
 #### 1. Clone the Repository
 
@@ -246,6 +191,20 @@ docker volume rm <volume_name>
 
 This command allows you to remove unused Docker volumes to free up space.
 
+### Push to DockerHub
+
+Build the images using the user you want to push to and continue pushing the images using the following commands.
+
+```bash
+docker build -t maknis3/eventmanager-frontend:latest ./frontend
+docker build -t maknis3/eventmanager-backend:latest ./backend
+```
+
+```bash
+docker push maknis3/eventmanager-frontend:latest
+docker push maknis3/eventmanager-backend:latest
+```
+
 ---
 
 ## Project Requirements and Docker Features
@@ -317,6 +276,14 @@ To scan an image:
 trivy image eventmanager/backend:1.0
 ```
 
+### Container user
+
+You can create users for a specific container so that the application doesn't run using the root user. Therefore limiting access and reducing risks. Users and Groups can directly be created within the `Dockerfile` using the following code:
+
+```Dockerfile
+RUN addgroup -S standardNonRootUser && adduser -S standardNonRootUser -G standardNonRootUser
+```
+
 ### Setup for Scaling and Swarm Mode
 
 This section explains how to configure and deploy the **EventManager** application with Docker Swarm for scaling the backend.
@@ -342,7 +309,7 @@ This section explains how to configure and deploy the **EventManager** applicati
    To deploy the application in Swarm mode, run the following command:
 
    ```bash
-   docker stack deploy -c docker-compose.yaml eventmanager_stack
+   docker stack deploy -c docker-compose-swarm.yaml eventmanager_stack
    ```
 
    This will create and deploy the services as defined in your `docker-compose.yaml` file but under Swarm management.
@@ -361,6 +328,14 @@ This section explains how to configure and deploy the **EventManager** applicati
 
    ```bash
    docker service ps eventmanager_stack_backend  # Lists backend replicas
+   ```
+
+4. **Stop the Swarm**
+
+   You can stop and leave the swarm using the following command:
+
+   ```bash
+   docker swarm leave --force
    ```
 
 #### Scaling the Backend
@@ -428,75 +403,13 @@ Swarm will update the backend service incrementally, ensuring no downtime.
 
 ---
 
-### Swarm Mode in `docker-compose.yaml`
+### Docker Deamon Curl-Request
 
-The following yaml code depicts the `docker-compose.yaml` file for working in Swarm mode:
+Using the following curl command you can access the logs of a specific container using the docker deamon.
 
-```yaml
-version: '3.8'
-
-services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    image: eventmanager/frontend:1.0
-    ports:
-      - "4200:80"
-    environment:
-      - API_URL=http://backend:5000
-    networks:
-      - eventmanager_network
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: eventmanager/backend:1.0
-    environment:
-      - MONGO_URI=mongodb://mongodb:27017/your_database_name
-    networks:
-      - eventmanager_network
-    depends_on:
-      - mongodb
-    deploy:
-      replicas: 3
-      update_config:
-        parallelism: 2
-        delay: 10s
-      restart_policy:
-        condition: on-failure
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 512M
-
-  mongodb:
-    image: mongo:latest
-    container_name: eventmanager_mongodb
-    ports:
-      - "27017:27017"
-    networks:
-      - eventmanager_network
-    volumes:
-      - mongodb_data:/data/db
-    environment:
-      - MONGO_INITDB_DATABASE=your_database_name
-
-networks:
-  eventmanager_network:
-    driver: overlay
-
-volumes:
-  mongodb_data:
-    driver: local
-```
-
-### Docker Integration
-
-- **Docker REST API with HTTPS**: To integrate Docker REST API securely with HTTPS, you would need to configure Docker Daemon with SSL certificates. You can follow the [Docker documentation](https://docs.docker.com/engine/security/https/) to set this up.
+´´´bash
+curl "http://localhost:2375/v1.47/containers/CONTAINERID/logs?stdout=1" --output -
+´´´
 
 ### Minimum App Features
 

@@ -1,4 +1,4 @@
-# Stage 1: Build the Angular project
+# Stage 1
 FROM node:22 as build
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -6,7 +6,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve the app with Nginx and custom config
+# Stage 2
 FROM nginx:alpine
 COPY --from=build /app/dist/event-manager-frontend/browser /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
