@@ -1,0 +1,15 @@
+<app-navbar></app-navbar>
+<div class="main-container">
+  <h2>My Events</h2>
+  <div class="event-list">
+    @for (event of myEvents; track myEvents.index) {
+    <app-event-card [event]="event" [showDeleteButton]="true" (refreshRequested)="onRefreshRequested()"></app-event-card>
+    }
+  </div>
+  <h2>Participating Events</h2>
+  <div class="event-list">
+    @for (event of participatingEvents; track participatingEvents.index) {
+    <app-event-card [event]="event" [showSignOutButton]="true" (refreshRequested)="onRefreshRequested()"></app-event-card>
+    }
+  </div>
+</div>

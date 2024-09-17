@@ -1,0 +1,53 @@
+version: '3.8'
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: eventmanager/frontend:1.0
+    container_name: eventmanager_frontend
+    ports:
+      - "4200:80"
+    environment:
+      - API_URL=http://backend:5000
+    networks:
+      - eventmanager_network
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: eventmanager/backend:1.0
+    container_name: eventmanager_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/your_database_name
+    networks:
+      - eventmanager_network
+    depends_on:
+      - mongodb
+
+  mongodb:
+    build:
+      context: ./mongodb
+      dockerfile: Dockerfile
+    container_name: eventmanager_mongodb
+    ports:
+      - "27017:27017"
+    networks:
+      - eventmanager_network
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=your_database_name
+
+networks:
+  eventmanager_network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local

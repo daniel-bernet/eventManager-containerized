@@ -1,0 +1,43 @@
+.event-card {
+  margin: 10px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  width: 80%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  &.conference {
+    background-color: #e3f2fd;
+  }
+  &.seminar {
+    background-color: #e1bee7;
+  }
+  &.workshop {
+    background-color: #c8e6c9;
+  }
+  &.social {
+    background-color: #fff9c4;
+  }
+  &.fundraiser {
+    background-color: #ffe0b2;
+  }
+  &.other {
+    background-color: #d7ccc8;
+  }
+  .event-actions button {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 0.25rem;
+    margin-top: 10px;
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    &:hover {
+      background-color: #0056b3;
+    }
+    &:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+  }
+}

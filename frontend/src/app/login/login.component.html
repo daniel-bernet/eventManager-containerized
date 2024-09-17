@@ -1,0 +1,25 @@
+<div class="main-container">
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="form-card">
+    <h2>Login</h2>
+    <div class="form-group">
+      <label for="username">Username:</label>
+      <input type="text" id="username" formControlName="username" />
+      @if (loginForm.get('username')?.touched &&
+      loginForm.get('username')?.errors?.['required']) {
+      <div class="alert alert-danger">Username is required.</div>
+      }
+    </div>
+    <div class="form-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" formControlName="password" />
+      @if (loginForm.get('password')?.touched &&
+      loginForm.get('password')?.errors?.['required']) {
+      <div class="alert alert-danger">Password is required.</div>
+      }
+    </div>
+    <button type="submit" [disabled]="!loginForm.valid">Log In</button>
+    <div class="switch-link">
+      Don't have an account? <a routerLink="/register">Register here</a>
+    </div>
+  </form>
+</div>

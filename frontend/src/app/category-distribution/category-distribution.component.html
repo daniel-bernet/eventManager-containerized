@@ -1,0 +1,6 @@
+<!-- category-distribution.component.html -->
+<ejs-chart id="chart-container" [primaryXAxis]="primaryXAxis" [title]="title">
+    <e-series-collection>
+        <e-series [dataSource]="categoryData" type="Column" xName="category" yName="count" name="Events Count"></e-series>
+    </e-series-collection>
+</ejs-chart>

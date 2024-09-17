@@ -1,0 +1,20 @@
+<app-navbar></app-navbar>
+<div class="main-container">
+  <div class="form-card">
+    <h4>Summary Statistics</h4>
+    <span>Total Events: {{ totalEvents }}</span>
+    <span>Total Users: {{ totalUsers }}</span>
+    <span>Upcoming Events: {{ upcomingEvents }}</span>
+    <span>Past Events: {{ pastEvents }}</span>
+  </div>
+  <br />
+  <br />
+  <div class="form-card">
+    <app-category-distribution></app-category-distribution>
+  </div>
+  <br />
+  <br />
+  <div class="form-card">
+    <app-category-participation-radar></app-category-participation-radar>
+  </div>
+</div>
