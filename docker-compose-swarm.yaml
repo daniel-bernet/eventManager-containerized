@@ -31,8 +31,7 @@ services:
           memory: 512M
 
   mongodb:
-    image: mongo:latest
-
+    image: mongo:7.0
     ports:
       - "27017:27017"
     networks:
@@ -48,4 +47,3 @@ networks:
 
 volumes:
   mongodb_data:
-    driver: local
