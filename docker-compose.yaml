@@ -34,6 +34,7 @@ services:
     build:
       context: ./mongodb
       dockerfile: Dockerfile
+    image: eventmanager/mongodb:1.0
     container_name: eventmanager_mongodb
     ports:
       - "127.0.0.1:27017:27017"
