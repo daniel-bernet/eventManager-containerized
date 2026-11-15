@@ -19,9 +19,8 @@
     "@angular/platform-browser-dynamic": "^18.0.0",
     "@angular/router": "^18.0.0",
     "@syncfusion/ej2-angular-charts": "^26.1.40",
-    "@syncfusion/ej2-charts": "*",
+    "@syncfusion/ej2-charts": "^26.1.40",
     "rxjs": "~7.8.0",
-    "save": "^2.9.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.14.3"
   },
