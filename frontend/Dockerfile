@@ -4,6 +4,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
 COPY . .
+ARG SYNCFUSION_LICENSE_KEY=""
+RUN if [ -n "$SYNCFUSION_LICENSE_KEY" ]; then \
+      printf "export const syncfusionLicenseKey = '%s';\n" "$SYNCFUSION_LICENSE_KEY" > src/syncfusion-license.ts; \
+    fi
 RUN npm run build
 
 # Stage 2
