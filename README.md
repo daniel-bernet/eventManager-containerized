@@ -1,421 +1,115 @@
-# EventManager - Containerized Application
+# EventManager, containerised
 
-This project is a web-based event management application that allows users to manage and participate in events. The application uses a **Flask backend**, an **Angular frontend**, and **MongoDB** as the database. The entire system is containerized using Docker to meet the module requirements for containerization, orchestration, and scalability.
+An event management web app (Angular, Flask, MongoDB) packaged as three Docker containers, with a Docker Swarm stack that runs the backend as three replicas.
 
-## Table of Contents
+![Search Events page with three made-up events](docs/screenshot.png)
 
-- [EventManager - Containerized Application](#eventmanager---containerized-application)
-  - [Table of Contents](#table-of-contents)
-  - [Project Architecture](#project-architecture)
-    - [Component Diagram](#component-diagram)
-    - [Communication Between Components](#communication-between-components)
-  - [Components Overview](#components-overview)
-  - [Setup](#setup)
-    - [Prerequisites](#prerequisites)
-    - [Steps to Set Up the Application](#steps-to-set-up-the-application)
-    - [docker-compose.yaml](#docker-composeyaml)
-      - [1. Clone the Repository](#1-clone-the-repository)
-      - [2. Build the Docker Images](#2-build-the-docker-images)
-      - [3. Start the Containers](#3-start-the-containers)
-      - [4. Verify the Setup](#4-verify-the-setup)
-      - [5. Stopping the Containers](#5-stopping-the-containers)
-  - [Docker Commands](#docker-commands)
-    - [Build and Start Services](#build-and-start-services)
-    - [Monitor Resource Usage](#monitor-resource-usage)
-    - [Inspect Volumes](#inspect-volumes)
-    - [Remove Volumes](#remove-volumes)
-    - [Push to DockerHub](#push-to-dockerhub)
-  - [Project Requirements and Docker Features](#project-requirements-and-docker-features)
-    - [Images](#images)
-    - [Network](#network)
-    - [Volumes](#volumes)
-    - [Resource Limitation](#resource-limitation)
-    - [Security](#security)
-    - [Container user](#container-user)
-    - [Setup for Scaling and Swarm Mode](#setup-for-scaling-and-swarm-mode)
-      - [Swarm Initialization and Deployment](#swarm-initialization-and-deployment)
-      - [Scaling the Backend](#scaling-the-backend)
-      - [Monitoring Services](#monitoring-services)
-      - [Networking in Swarm Mode](#networking-in-swarm-mode)
-      - [Rolling Updates](#rolling-updates)
-      - [Troubleshooting Swarm Mode](#troubleshooting-swarm-mode)
-    - [Docker Daemon Curl-Request](#docker-daemon-curl-request)
-    - [Minimum App Features](#minimum-app-features)
+## What and why
 
----
+This was an individual school project during my apprenticeship (GIBZ, 2024). The assignment was to containerise an application: images, a custom network, a volume, resource limits, a non-root container user, and scaling with Docker Swarm.
 
-## Project Architecture
+The app was built in June 2024. The containerisation is the focus of this repo. I wrote the app earlier in two separate repositories (backend and frontend, now private) and copied it in here for this project. Users can register, create events, sign up for and leave events, search and filter them, and see simple statistics and charts.
 
-This application follows a **multi-container architecture** with the following components:
+![Component diagram: frontend, backend and database containers](diagrams/component_diagram_eventManager_docker.svg)
 
-- **Frontend**: An Angular-based UI for interacting with the event management system.
-- **Backend**: A Python Flask API that handles CRUD operations on events and connects to the MongoDB database.
-- **Database**: MongoDB, a NoSQL database that stores the event data.
+| Container | Image | What it does |
+|---|---|---|
+| Frontend | `eventmanager/frontend:1.0`, multi-stage build (`node:22` → `nginx:alpine`) | nginx serves the Angular app and forwards `/api/` to the backend |
+| Backend | `eventmanager/backend:1.0`, based on `python:3.12-slim` | Flask REST API on port 5000, runs as the non-root user `flaskuser` |
+| Database | `eventmanager/mongodb:1.0`, based on `mongo:7.0` | MongoDB; `init-mongo.js` creates the collections, a unique index on `username` and a text index for search |
 
-### Component Diagram
+- **Network:** a custom bridge network (`eventmanager_network`) in Docker Compose, an overlay network in Swarm.
+- **Ports (Compose):** frontend `4200 → 80`, backend `5000 → 5000`, MongoDB `127.0.0.1:27017 → 27017`.
+- **Volume:** MongoDB data lives in the named volume `mongodb_data`. Compose prefixes it with the project name, for example `eventmanager-containerized_mongodb_data` (see `docker volume ls`).
+- **Swarm stack** (`docker-compose-swarm.yaml`): three backend replicas, limited to 0.5 CPU and 512 MB each, restarted on failure, and updated two at a time with a 10-second delay.
 
-![Component Diagram](diagrams/component_diagram_eventManager_docker.svg)
+## Result
 
-### Communication Between Components
+The whole app starts with one `docker compose up`. I ran the Swarm stack with three backend replicas, tested it, and demonstrated it live when I presented the project.
 
-- **Frontend** communicates with the **Backend** via HTTP requests to the Flask API.
-- **Backend** interacts with **MongoDB** using the `pymongo` library to store and retrieve event data.
+When I prepared the repository for publication in November 2026, a clean run showed that login and search failed with HTTP 500. These problems, and two other issues with the setup, are fixed in separate commits after the tag [`v1.0`](https://github.com/daniel-bernet/eventManager-containerized/tree/v1.0), which marks the state I handed in:
 
----
+- The backend gets `SECRET_KEY` from the environment, so login works.
+- Search results are converted to JSON correctly.
+- MongoDB, which runs without authentication, is published on `127.0.0.1` only (Compose) or not at all (Swarm).
+- The Swarm stack uses the locally built images, including the custom MongoDB image, instead of images on Docker Hub.
 
-## Components Overview
+The app itself is otherwise unchanged; see [Limitations](#limitations-and-status).
 
-- **Frontend (Angular)**: Provides an interactive GUI for users to create, read, update, and delete events.
-- **Backend (Flask)**: Exposes a REST API for managing events and communicating with the MongoDB database.
-- **Database (MongoDB)**: Stores event data.
+## How to run
 
----
-
-## Setup
-
-This chapter will guide you through the process of setting up and running the Docker images and containers for the EventManager project, which includes the Angular frontend, Flask backend, and MongoDB database. By the end of this setup, you will have a fully containerized application running on your local machine.
-
-### Prerequisites
-
-Before proceeding with the setup, make sure you have the following installed on your machine:
-
-1. **Docker**: Ensure you have Docker installed. You can download it from [Docker's official website](https://www.docker.com/get-started).
-2. **Docker Compose**: This is usually bundled with Docker Desktop. If not, follow [this link](https://docs.docker.com/compose/install/) to install Docker Compose.
-3. **Git**: You'll need Git to clone the repository. Install it from [Git's official website](https://git-scm.com/).
-
-### Steps to Set Up the Application
-
-### docker-compose.yaml
-
-The following yaml code depicts the base `docker-compose.yaml` file part of the github repository.
-
-#### 1. Clone the Repository
-
-Start by cloning the EventManager project from your version control system:
+You need Docker with the Compose plugin.
 
 ```bash
-git clone https://github.com/maknis3/eventmanager.git
-cd eventmanager
+git clone https://github.com/daniel-bernet/eventManager-containerized.git
+cd eventManager-containerized
+docker compose up -d --build
 ```
 
-This will download all necessary files, including the `docker-compose.yaml` file, backend, frontend, and any supporting documents.
+Then open <http://localhost:4200>, register a user and create an event. Stop with `docker compose down`; add `--volumes` to delete the data as well.
 
-#### 2. Build the Docker Images
+Optional environment variables (in your shell or a `.env` file next to `docker-compose.yaml`):
 
-To create the Docker images for the frontend, backend, and MongoDB, you will use Docker Compose. The provided `docker-compose.yaml` is preconfigured to build and run all the services. To build the images, run:
+| Variable | Default | Purpose |
+|---|---|---|
+| `SECRET_KEY` | `insecure-local-dev-key` | Flask session key. Set your own for anything beyond a local test. |
+| `SYNCFUSION_LICENSE_KEY` | empty | Build argument for the frontend. Without a key the app works, but Syncfusion shows a licence banner. |
+
+### Docker Swarm
+
+The Swarm stack uses the images that Compose builds, so build them first. Locally built images only work on a single-node swarm; with several nodes, push them to a registry first.
 
 ```bash
-docker-compose build --no-cache
+docker compose build
+docker swarm init
+docker stack deploy -c docker-compose-swarm.yaml eventmanager_stack
+docker service ps eventmanager_stack_backend    # the three backend replicas
 ```
 
-This command will:
-
-- **Frontend**: Build the Angular application image from the `frontend/Dockerfile`.
-- **Backend**: Build the Flask application image from the `backend/Dockerfile`.
-- **MongoDB**: Build the MongoDB application image from the `mongodb/Dockerfile`.
-
-#### 3. Start the Containers
-
-Once the images are built, start the containers with:
-
-```bash
-docker-compose up -d
-```
-
-This command does the following:
-
-- **Creates a custom network** (`eventmanager_network`) to allow communication between the containers.
-- **Starts the MongoDB** container and maps its data directory to a volume for persistence.
-- **Launches the Flask backend** on `http://localhost:5000`.
-- **Starts the Angular frontend** on `http://localhost:4200`, mapping port 80 inside the container to port 4200 on your local machine.
-
-#### 4. Verify the Setup
-
-To verify that all services are running correctly, you can Check Container Status using:
-
-```bash
-docker-compose ps
-```
-
-#### 5. Stopping the Containers
-
-To stop the containers gracefully:
-
-```bash
-docker-compose down
-```
-
-This command will stop and remove the running containers. However, it will **not remove the volumes**, so your MongoDB data will persist across sessions.
-
-If you want to stop the containers and remove all resources, including volumes, use:
-
-```bash
-docker-compose down --volumes
-```
-
----
-
-## Docker Commands
-
-### Build and Start Services
-
-```bash
-docker-compose up --build
-```
-
-This command builds all the necessary images (Frontend, Backend, MongoDB) and starts the services as specified in the `docker-compose.yaml` file.
-
-This command will scale the **backend** service to run 3 instances.
-
-### Monitor Resource Usage
-
-```bash
-docker stats
-```
-
-You can monitor the CPU, memory, and I/O usage of the running containers using this command.
-
-### Inspect Volumes
-
-```bash
-docker volume inspect mongodb_data
-```
-
-Inspect the details of the MongoDB volume where the database is persisted.
-
-### Remove Volumes
-
-```bash
-docker volume rm <volume_name>
-```
-
-This command allows you to remove unused Docker volumes to free up space.
-
-### Push to DockerHub
-
-Build the images using the user you want to push to and continue pushing the images using the following commands.
-
-```bash
-docker build -t maknis3/eventmanager-frontend:latest ./frontend
-docker build -t maknis3/eventmanager-backend:latest ./backend
-```
-
-```bash
-docker push maknis3/eventmanager-frontend:latest
-docker push maknis3/eventmanager-backend:latest
-```
-
----
-
-## Project Requirements and Docker Features
-
-This section explains how the project meets the course requirements.
-
-### Images
-
-- The application uses **three images**:
-  - **Frontend (Angular)**: `eventmanager/frontend:1.0`
-  - **Backend (Flask)**: `eventmanager/backend:1.0`
-  - **MongoDB**: Uses the official MongoDB image `mongo:6.0`
-
-- Each image is versioned (`1.0`) and can be tagged during build. For example:
-
-    ```bash
-    docker build -t eventmanager/backend:1.0 ./backend
-    ```
-
-### Network
-
-- **Custom Network**: The `docker-compose.yaml` file creates a custom **bridge network** (`eventmanager_network`) to enable communication between the containers.
-- **Port Forwarding**: The following ports are exposed:
-  - **Frontend**: `4200 -> 80`
-  - **Backend**: `5000 -> 5000`
-  - **MongoDB**: `27017 -> 27017`
-
-To view network details:
-
-```bash
-docker network inspect eventmanager_network
-```
-
-### Volumes
-
-- **Volume Mounting**: MongoDB data is persisted in a Docker volume (`mongodb_data`).
-- **Inspecting Volumes**:
-
-    ```bash
-    docker volume inspect mongodb_data
-    ```
-
-- **Removing Volumes**:
-
-    ```bash
-    docker volume rm mongodb_data
-    ```
-
-### Resource Limitation
-
-The resources can be limited for each container. In the `docker-compose.yaml`, you can define CPU and memory limitations for services. Example:
-
-```yaml
-deploy:
-  resources:
-    limits:
-      cpus: '0.5'
-      memory: 512M
-```
-
-### Security
-
-- **User for Container**: The backend container runs as a non-root user (`myuser`) for security purposes.
-- **Vulnerability Scanning**: Use tools like `Trivy` to scan the images for vulnerabilities.
-
-To scan an image:
-
-```bash
-trivy image eventmanager/backend:1.0
-```
-
-### Container user
-
-You can create users for a specific container so that the application doesn't run using the root user. Therefore limiting access and reducing risks. Users and Groups can directly be created within the `Dockerfile` using the following code:
-
-```Dockerfile
-RUN addgroup -S standardNonRootUser && adduser -S standardNonRootUser -G standardNonRootUser
-```
-
-### Setup for Scaling and Swarm Mode
-
-This section explains how to configure and deploy the **EventManager** application with Docker Swarm for scaling the backend.
-
-#### Swarm Initialization and Deployment
-
-1. **Initialize Docker Swarm**:
-
-   First, you need to initialize Docker Swarm on your machine. This enables Docker's built-in orchestration features.
-
-   Run the following command in your terminal:
-
-   ```bash
-   docker swarm init
-   ```
-
-   This initializes Docker Swarm and makes your current machine the **Swarm manager**.
-
-2. **Deploy the Application Stack**:
-
-   In Swarm mode, instead of using `docker-compose`, you use `docker stack deploy` to deploy your services.
-
-   To deploy the application in Swarm mode, run the following command:
-
-   ```bash
-   docker stack deploy -c docker-compose-swarm.yaml eventmanager_stack
-   ```
-
-   This will create and deploy the services as defined in your `docker-compose.yaml` file but under Swarm management.
-
-3. **Verify the Stack and Services**:
-
-   You can verify that the services are running by listing the active stacks and services:
-
-   ```bash
-   docker stack ls  # Lists all active stacks
-
-   docker stack services eventmanager_stack  # Lists services in the stack
-   ```
-
-   To check the running containers (tasks) for a specific service, use:
-
-   ```bash
-   docker service ps eventmanager_stack_backend  # Lists backend replicas
-   ```
-
-4. **Stop the Swarm**
-
-   You can stop and leave the swarm using the following command:
-
-   ```bash
-   docker swarm leave --force
-   ```
-
-#### Scaling the Backend
-
-With Docker Swarm, you can easily scale services. The `backend` service can be scaled up or down to handle more or fewer requests.
-
-To scale the backend to 3 replicas:
-
-```bash
-docker service scale eventmanager_stack_backend=3
-```
-
-This command will deploy 3 replicas of the backend service, distributing requests evenly across the instances via Docker's internal load balancer.
-
-#### Monitoring Services
-
-To monitor the resource usage of the running services, use the following command:
-
-```bash
-docker stats
-```
-
-This will show the CPU, memory, and I/O usage of the containers in real time.
-
-#### Networking in Swarm Mode
-
-In Docker Swarm, all services are deployed on an **overlay network**. This network allows the services to communicate internally without exposing their ports directly to the host.
-
-- The frontend service will use `http://backend:5000` to communicate with the backend.
-- Docker Swarm automatically load-balances requests between the backend replicas.
-
-#### Rolling Updates
-
-Docker Swarm allows for rolling updates to your services. If you need to update the backend image (for example, deploying version `2.0`), you can do so with a rolling update.
-
-1. **Update the `docker-compose.yaml` file** to reference the new image version:
-
-   ```yaml
-   image: eventmanager/backend:2.0
-   ```
-
-2. **Redeploy the stack** with the updated image:
-
-   ```bash
-   docker stack deploy -c docker-compose.yaml eventmanager_stack
-   ```
-
-Swarm will update the backend service incrementally, ensuring no downtime.
-
-#### Troubleshooting Swarm Mode
-
-- To inspect logs for a specific service, use:
+- Scale: `docker service scale eventmanager_stack_backend=5`
+- Rolling update: build a new backend image, change its tag in `docker-compose-swarm.yaml`, and run the same `docker stack deploy` command again. Swarm replaces two replicas at a time, 10 seconds apart.
+- Logs of all replicas: `docker service logs eventmanager_stack_backend`
+- Remove: `docker stack rm eventmanager_stack`, then `docker swarm leave --force`
+
+### Other useful commands
+
+- Resource usage: `docker stats`
+- Container logs through the Docker Engine API, without exposing it on a TCP port:
 
   ```bash
-  docker service logs eventmanager_stack_backend
+  curl --unix-socket /var/run/docker.sock "http://localhost/containers/eventmanager_backend/logs?stdout=1&stderr=1" --output -
   ```
 
-  This command will show logs for all backend replicas, which helps in debugging issues during scale-out operations.
+- Vulnerability scan (recommended, not part of the project): `trivy image eventmanager/backend:1.0`
 
-- If the stack needs to be removed or reset, you can remove the stack with:
+## Limitations and status
 
-  ```bash
-  docker stack rm eventmanager_stack
-  ```
+Status: completed in September 2024 as a school project. The fixes listed above were added in November 2026; nothing else was developed further.
+
+The app was written as an exercise, not for real use:
+
+- **No authorisation.** The frontend sends the user ID with each request and the backend trusts it. Anyone can delete any event.
+- **Deleting an account fails.** The transaction is started on a second MongoDB client, which PyMongo rejects. Transactions also need a replica set, and the setup runs a single standalone MongoDB server.
+- **No update endpoint.** Events can be created and deleted, but not edited.
+- **The frontend test is outdated.** `app.component.spec.ts` still expects the Angular starter page, so `ng test` fails.
+- **Hardcoded database names.** The backend always uses the database `your_database_name`; the database name in `MONGO_URI` is ignored.
+- The login state is kept only in the browser's memory, so reloading the page logs you out.
+- The backend runs Flask's built-in development server.
+
+## Licence
+
+- Code: [MIT](LICENSE)
+- This README and the diagram: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+## Credits
+
+Third-party software is installed through npm, pip or the Docker base images; none of it is included in this repository. It keeps its own licence:
+
+- [Angular](https://angular.dev) (MIT)
+- [Syncfusion Essential JS 2 Charts](https://www.syncfusion.com/angular-components/angular-charts): Syncfusion community or commercial licence; using it requires one of them
+- [Flask](https://flask.palletsprojects.com), [Flask-Cors](https://github.com/corydolphin/flask-cors) and [PyMongo](https://pymongo.readthedocs.io)
+- [MongoDB](https://www.mongodb.com), [nginx](https://nginx.org), [Node.js](https://nodejs.org) and [Python](https://www.python.org) official Docker images
 
 ---
 
-### Docker Daemon Curl-Request
-
-Using the following curl command you can access the logs of a specific container using the docker daemon.
-
-´´´bash
-curl "http://localhost:2375/v1.47/containers/CONTAINERID/logs?stdout=1" --output -
-´´´
-
-### Minimum App Features
-
-- **CRUD Application**: The backend provides full CRUD functionality for managing events. The endpoints allow creating, reading, updating, and deleting events.
-- **Web Framework (Angular)**: The frontend is built using Angular, providing a responsive and interactive GUI.
-- **Content in Database**: MongoDB stores the event data and supports queries from the backend.
-- **Interactive GUI**: Users can interact with the system via the Angular web interface to manage events.
-
----
+Project page: <https://dbernet.ch/projects/>
