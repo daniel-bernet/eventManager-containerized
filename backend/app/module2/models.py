@@ -44,4 +44,12 @@ def get_all_events(db):
     return results
 
 def search_events(db, query):
-    return list(db.events.find({"$text": {"$search": query}}))
+    results = []
+    for event in db.events.find({"$text": {"$search": query}}):
+        event['_id'] = str(event['_id'])
+        event['creator'] = str(event['creator'])
+        event['attendees'] = [str(user_id) for user_id in event.get('attendees', [])]
+        if event.get('timestamp'):
+            event['timestamp'] = event['timestamp'].isoformat()
+        results.append(event)
+    return results
