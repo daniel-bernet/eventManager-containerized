@@ -24,6 +24,7 @@ services:
       - "5000:5000"
     environment:
       - MONGO_URI=mongodb://mongodb:27017/your_database_name
+      - SECRET_KEY=${SECRET_KEY:-insecure-local-dev-key}
     networks:
       - eventmanager_network
     depends_on:
