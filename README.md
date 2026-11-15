@@ -59,6 +59,8 @@ Optional environment variables (in your shell or a `.env` file next to `docker-c
 
 The Swarm stack uses the images that Compose builds, so build them first. Locally built images only work on a single-node swarm; with several nodes, push them to a registry first.
 
+The 2024 version of the Swarm stack was run with three backend replicas and demonstrated live. The post-submission changes to `docker-compose-swarm.yaml` were validated with `docker stack config` but not run again, because Swarm tasks cannot start under the snap package of Docker on my current laptop.
+
 ```bash
 docker compose build
 docker swarm init
